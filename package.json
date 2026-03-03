@@ -1,0 +1,18 @@
+{
+  "name": "flaky-vitest-tests",
+  "version": "1.0.0",
+  "description": "Repository with intentionally flaky Vitest tests for testing purposes",
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:ci": "vitest run --reporter=junit --outputFile=test-results/vitest/results.xml"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0"
+  },
+  "keywords": ["vitest", "testing", "flaky-tests"],
+  "author": "",
+  "license": "MIT"
+}
