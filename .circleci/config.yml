@@ -1,32 +1,92 @@
-# This config was automatically generated from your source code
-# Stacks detected: deps:node:.
 version: 2.1
+
 orbs:
   node: circleci/node@5
+
 jobs:
-  test-node:
-    # Install node dependencies and run tests
-    executor: node/default
+  install:
+    executor:
+      name: node/default
+      tag: "22.19"
+    resource_class: medium
     steps:
       - checkout
       - node/install-packages:
           pkg-manager: npm
-      - run:
-          name: Run tests
-          command: npm run test:ci
-  deploy:
-    # This is an example deploy job, not actually used by the workflow
-    docker:
-      - image: cimg/base:stable
+          cache-path: ~/.npm
+          override-ci-command: npm ci
+
+  test:
+    executor:
+      name: node/default
+      tag: "22.19"
+    resource_class: medium
     steps:
-      # Replace this with steps to deploy to users
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+          cache-path: ~/.npm
+          override-ci-command: npm ci
       - run:
-          name: deploy
-          command: '#e.g. ./deploy.sh'
+          name: Create test results directory
+          command: mkdir -p test-results/vitest
+      - run:
+          name: Run Vitest tests
+          command: npm run test:ci
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: test-results
+          destination: test-results
+
+  build:
+    executor:
+      name: node/default
+      tag: "22.19"
+    resource_class: medium
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+          cache-path: ~/.npm
+          override-ci-command: npm ci
+      - run:
+          name: Build project
+          command: |
+            if npm run --list build 2>/dev/null | grep -q "^build$"; then
+              npm run build
+            else
+              echo "No build script found, skipping."
+            fi
+
+  # # deploy:
+  # #   # Uncomment and configure this job for your deployment needs.
+  # #   # You will need to add environment variables (e.g., SSH keys, cloud credentials)
+  # #   # in your CircleCI project settings before enabling this job.
+  # #   docker:
+  # #     - image: cimg/base:stable
+  # #   steps:
+  # #     - checkout
+  # #     - run:
+  # #         name: Deploy
+  # #         command: |
+  # #           # e.g. ./scripts/deploy.sh
+  # #           echo "Add your deploy steps here"
+
 workflows:
-  build-and-test:
+  ci:
     jobs:
-      - test-node
-    # - deploy:
-    #     requires:
-    #       - test-node
+      - install
+      - test:
+          requires:
+            - install
+      - build:
+          requires:
+            - install
+      # - deploy:
+      #     requires:
+      #       - test
+      #       - build
+      #     filters:
+      #       branches:
+      #         only: main
