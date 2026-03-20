@@ -1,0 +1,67 @@
+version: 2.1
+
+orbs:
+  node: circleci/node@6.1.0
+
+jobs:
+  install:
+    executor:
+      name: node/default
+      tag: "22.19"
+    resource_class: medium
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - persist_to_workspace:
+          root: .
+          paths:
+            - node_modules
+
+  test:
+    executor:
+      name: node/default
+      tag: "22.19"
+    resource_class: medium
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Create test results directory
+          command: mkdir -p test-results/vitest
+      - run:
+          name: Run Vitest tests
+          command: npm run test:ci
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: test-results
+          destination: test-results
+
+  # Uncomment and configure the deploy job below once you have the necessary
+  # secrets and environment-specific configuration set up in CircleCI.
+  #
+  # deploy:
+  #   executor:
+  #     name: node/default
+  #     tag: "22.19"
+  #   resource_class: medium
+  #   steps:
+  #     - checkout
+  #     - attach_workspace:
+  #         at: .
+  #     - run:
+  #         name: Deploy
+  #         command: |
+  #           # Add your deployment commands here
+  #           # Make sure to add required environment variables in CircleCI project settings
+  #           echo "Deploy step not configured"
+
+workflows:
+  ci:
+    jobs:
+      - install
+      - test:
+          requires:
+            - install
