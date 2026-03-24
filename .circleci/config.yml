@@ -1,1 +1,80 @@
 version: 2.1
+
+# Orbs are reusable packages of CircleCI configuration
+orbs:
+  node: circleci/node@5.2.0
+
+# Define a job to be invoked later in a workflow
+jobs:
+  # Build and test job
+  build-and-test:
+    docker:
+      # Use the official Node.js Docker image
+      - image: cimg/node:22.19.0
+
+    steps:
+      # Check out the code from the repository
+      - checkout
+
+      # Install dependencies using npm ci for clean, reproducible installs
+      - node/install-packages:
+          pkg-manager: npm
+          cache-path: ~/.npm
+          override-ci-command: npm ci
+
+      # Run tests with Vitest
+      - run:
+          name: Run tests
+          command: npm run test:ci
+
+      # Store test results for CircleCI to display
+      - store_test_results:
+          path: test-results
+
+      # Store test results as artifacts for download
+      - store_artifacts:
+          path: test-results
+          destination: test-results
+
+  # Separate job to run tests with retry enabled (optional)
+  test-with-retry:
+    docker:
+      - image: cimg/node:22.19.0
+
+    steps:
+      - checkout
+
+      - node/install-packages:
+          pkg-manager: npm
+          cache-path: ~/.npm
+          override-ci-command: npm ci
+
+      # Run tests with retry to handle flaky tests
+      - run:
+          name: Run tests with retry
+          command: |
+            npm run test:run -- --retry=3 || exit 1
+
+      - store_artifacts:
+          path: test-results
+          destination: test-results-retry
+
+# Define workflows to orchestrate jobs
+workflows:
+  version: 2
+
+  # Main workflow that runs on every commit
+  build-test-workflow:
+    jobs:
+      # Run the build and test job
+      - build-and-test
+
+      # Optionally run tests with retry on main/master branch
+      - test-with-retry:
+          requires:
+            - build-and-test
+          filters:
+            branches:
+              only:
+                - main
+                - master
